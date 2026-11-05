@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualizzatore Solidi e Campi 3D</title>
+    <!-- Tailwind CSS per la UI -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Math.js per il parsing delle equazioni -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.8.0/math.min.js"></script>
+    <!-- Three.js e OrbitControls -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #0f172a; font-family: sans-serif; }
+        #canvas-container { width: 100%; height: 100%; }
+        /* Scrollbar personalizzata per il pannello */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+        .geogebra-dot { width: 16px; height: 16px; border-radius: 50%; display: inline-block; cursor: pointer; border: 2px solid #3b82f6; transition: 0.2s; }
+        .geogebra-dot.active { background-color: #3b82f6; }
+        .geogebra-dot.field { border-color: #06b6d4; }
+        .geogebra-dot.field.active { background-color: #06b6d4; }
+    </style>
+</head>
+<body class="flex h-screen text-slate-100">
+
+    <!-- Pannello Sinistro (UI) -->
+    <div class="w-96 bg-slate-800 border-r border-slate-700 flex flex-col z-10 shadow-xl overflow-y-auto">
+        <div class="p-5 border-b border-slate-700 flex justify-between items-center">
+            <h1 class="text-xl font-bold text-white">Solidi 3D</h1>
+            <button onclick="clearAll()" class="bg-red-500 hover:bg-red-600 text-white text-xs px-3 py-1.5 rounded font-semibold transition">Nuovo Vuoto</button>
+        </div>
+
+        <!-- Condizioni Solido -->
+        <div class="p-5 border-b border-slate-700">
+            <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Disequazioni Solido</h2>
+            <div id="equations-list" class="space-y-3">
+                <!-- Generate dinamicamente via JS -->
+            </div>
+            <button onclick="addEquation()" class="mt-4 text-blue-400 text-sm font-medium hover:text-blue-300 flex items-center">
+                + Aggiungi condizione
+            </button>
+        </div>
+
+        <!-- Campo 3D -->
+        <div class="p-5 border-b border-slate-700">
+            <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Campo (Vettoriale o Scalare)</h2>
+            <div class="flex items-start gap-3 bg-slate-700/50 p-3 rounded-lg border border-slate-600">
+                <div id="field-dot" class="geogebra-dot field mt-2" onclick="toggleField()"></div>
+                <div class="flex-1">
+                    <input type="text" id="field-input" class="w-full bg-transparent border-b border-slate-500 text-white outline-none focus:border-cyan-400 font-mono text-sm py-1" value="[ -y, x, z/2 ]" placeholder="[ Fx, Fy, Fz ] o F(x,y,z)">
+                    <div class="text-xs text-slate-400 mt-2 flex justify-between">
+                        <span id="field-status">Campo Spento</span>
+                        <span class="text-cyan-400 cursor-pointer" onclick="toggleField()">ON/OFF</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Impostazioni Grafiche -->
+        <div class="p-5 border-b border-slate-700 space-y-4">
+            <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Impostazioni Grafiche</h2>
+            
+            <div>
+                <div class="flex justify-between text-sm mb-1">
+                    <span>Opacità Solido</span>
+                    <span id="val-opacity">40%</span>
+                </div>
+                <input type="range" id="opacita" min="0" max="100" value="40" class="w-full accent-blue-500" oninput="updateSettings()">
+            </div>
+
+            <div>
+                <div class="flex justify-between text-sm mb-1">
+                    <span>Qualità Risoluzione Solido</span>
+                    <span id="val-res">Max (36³)</span>
+                </div>
+                <input type="range" id="risoluzione" min="10" max="40" value="36" class="w-full accent-blue-500" onchange="updateSolid()">
+            </div>
+
+            <label class="flex items-center gap-3 text-sm cursor-pointer mt-4">
+                <input type="checkbox" id="spigoli" checked class="w-4 h-4 accent-blue-500" onchange="updateSettings()">
+                Evidenzia spigoli e contorni
+            </label>
+        </div>
+
+        <!-- Risultati Calcolo -->
+        <div class="p-5 bg-slate-900/50 mt-auto">
+            <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Analisi Numerica</h2>
+            <div class="space-y-2 text-sm">
+                <div class="flex justify-between">
+                    <span class="text-slate-300">Volume (∫∫∫ dV):</span>
+                    <span id="res-volume" class="font-mono text-green-400">Calcolo...</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-slate-300 text-xs">Flusso uscente (∫∫∫ ∇·F dV):</span>
+                    <span id="res-flux" class="font-mono text-cyan-400">-</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Area Canvas 3D -->
+    <div id="canvas-container" class="flex-1 relative">
+        <div id="loading" class="absolute inset-0 bg-slate-900/80 flex items-center justify-center z-20 text-white font-bold text-xl" style="display: none;">
+            Calcolo Geometria in corso...
+        </div>
+    </div>
+
+    <script>
+        // Stato App
+        let equations = [
+            { id: 1, text: "x + y + z <= 4", active: true },
+            { id: 2, text: "x^2 + y^2 >= 1", active: true },
+            { id: 3, text: "x >= 0", active: true },
+            { id: 4, text: "y >= 0", active: true },
+            { id: 5, text: "z >= 0", active: true }
+        ];
+        
+        let fieldActive = false;
+
+        // Three.js Globals
+        let scene, camera, renderer, controls;
+        let solidMesh, edgesMesh, arrowsGroup;
+
+        // Limiti Griglia di calcolo
+        const DOMAIN = { min: -1, max: 5 };
+
+        initThreeJS();
+        renderUI();
+        updateSolid();
+
+        // ---- UI FUNZIONI ----
+
+        function renderUI() {
+            const list = document.getElementById('equations-list');
+            list.innerHTML = '';
+            equations.forEach((eq, index) => {
+                list.innerHTML += `
+                    <div class="flex items-center gap-3 bg-slate-800 p-2 rounded">
+                        <div class="geogebra-dot ${eq.active ? 'active' : ''}" onclick="toggleEq(${index})"></div>
+                        <input type="text" class="flex-1 bg-transparent border-b border-slate-600 text-white outline-none focus:border-blue-400 font-mono text-sm py-1" 
+                               value="${eq.text}" onchange="updateEqText(${index}, this.value)">
+                        <button onclick="removeEq(${index})" class="text-slate-500 hover:text-red-400 text-lg">×</button>
+                    </div>
+                `;
+            });
+            document.getElementById('field-dot').className = `geogebra-dot field mt-2 ${fieldActive ? 'active' : ''}`;
+            document.getElementById('field-status').innerText = fieldActive ? 'Campo Visibile' : 'Campo Spento';
+            document.getElementById('field-status').className = fieldActive ? 'text-cyan-400' : 'text-slate-400';
+        }
+
+        function toggleEq(index) {
+            equations[index].active = !equations[index].active;
+            renderUI();
+            updateSolid();
+        }
+
+        function updateEqText(index, text) {
+            equations[index].text = text;
+            updateSolid();
+        }
+
+        function removeEq(index) {
+            equations.splice(index, 1);
+            renderUI();
+            updateSolid();
+        }
+
+        function addEquation() {
+            equations.push({ id: Date.now(), text: "", active: true });
+            renderUI();
+        }
+
+        function clearAll() {
+            equations = [];
+            fieldActive = false;
+            document.getElementById('field-input').value = "";
+            renderUI();
+            updateSolid();
+        }
+
+        function toggleField() {
+            fieldActive = !fieldActive;
+            if (fieldActive) {
+                // Abbassa l'opacità per vedere i vettori
+                document.getElementById('opacita').value = 40;
+                document.getElementById('val-opacity').innerText = "40%";
+            }
+            renderUI();
+            updateSettings(); // Aggiorna shader e vettori
+        }
+
+        function updateSettings() {
+            const opacity = document.getElementById('opacita').value / 100;
+            document.getElementById('val-opacity').innerText = opacity * 100 + "%";
+            
+            const res = document.getElementById('risoluzione').value;
+            document.getElementById('val-res').innerText = (res == 40 ? "Ultra" : res == 36 ? "Max" : "Med") + ` (${res}³)`;
+
+            const showEdges = document.getElementById('spigoli').checked;
+
+            if (solidMesh) {
+                solidMesh.material.opacity = opacity;
+                solidMesh.material.transparent = opacity < 1.0;
+                solidMesh.material.needsUpdate = true;
+            }
+            if (edgesMesh) edgesMesh.visible = showEdges;
+
+            drawField();
+        }
+
+        // ---- THREE.JS E MOTORE GRAFICO ----
+
+        function initThreeJS() {
+            const container = document.getElementById('canvas-container');
+            
+            scene = new THREE.Scene();
+            
+            // Assi Cartesiani (X rosso, Y verde, Z blu)
+            const axesHelper = new THREE.AxesHelper( 6 );
+            scene.add( axesHelper );
+
+            // Griglia sul piano XY
+            const gridHelper = new THREE.GridHelper( 10, 10, 0x444444, 0x222222 );
+            gridHelper.rotation.x = Math.PI / 2; 
+            scene.add( gridHelper );
+
+            // Luci
+            const light1 = new THREE.DirectionalLight(0xffffff, 0.8);
+            light1.position.set(5, 10, 7);
+            scene.add(light1);
+            const light2 = new THREE.DirectionalLight(0xffffff, 0.4);
+            light2.position.set(-5, -5, -7);
+            scene.add(light2);
+            scene.add(new THREE.AmbientLight(0x404040, 1.5));
+
+            camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 100);
+            camera.position.set(6, 6, 6);
+            camera.up.set(0, 0, 1); // Z is up
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            container.appendChild(renderer.domElement);
+
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.1;
+
+            window.addEventListener('resize', () => {
+                camera.aspect = container.clientWidth / container.clientHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(container.clientWidth, container.clientHeight);
+            });
+
+            animate();
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        // ---- PARSING MATEMATICO E GENERAZIONE MESH ----
+
+        function parseCondition(text) {
+            if (!text.trim()) return null;
+            try {
+                // Sostituisci =, <=, >= con normalizzazione per avere f(x,y,z) <= 0
+                let expr = text;
+                if (text.includes('<=')) {
+                    let parts = text.split('<=');
+                    expr = `(${parts[0]}) - (${parts[1]})`;
+                } else if (text.includes('>=')) {
+                    let parts = text.split('>=');
+                    expr = `(${parts[1]}) - (${parts[0]})`;
+                } else if (text.includes('<')) {
+                    let parts = text.split('<');
+                    expr = `(${parts[0]}) - (${parts[1]})`;
+                } else if (text.includes('>')) {
+                    let parts = text.split('>');
+                    expr = `(${parts[1]}) - (${parts[0]})`;
+                }
+                const compiled = math.compile(expr);
+                return (x, y, z) => compiled.evaluate({x, y, z});
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function updateSolid() {
+            document.getElementById('loading').style.display = 'flex';
+            
+            // Ritardo per permettere alla UI di mostrare il loader
+            setTimeout(() => {
+                generateGeometry();
+                updateSettings();
+                document.getElementById('loading').style.display = 'none';
+            }, 50);
+        }
+
+        function generateGeometry() {
+            // Rimuovi vecchi oggetti
+            if (solidMesh) scene.remove(solidMesh);
+            if (edgesMesh) scene.remove(edgesMesh);
+            if (arrowsGroup) scene.remove(arrowsGroup);
+            document.getElementById('res-volume').innerText = "Calcolo...";
+            document.getElementById('res-flux').innerText = "-";
+
+            const activeEqs = equations.filter(eq => eq.active && eq.text.trim() !== "");
+            const funcs = activeEqs.map(eq => parseCondition(eq.text)).filter(f => f !== null);
+
+            if (funcs.length === 0) {
+                document.getElementById('res-volume').innerText = "Infinito (Spazio vuoto)";
+                return;
+            }
+
+            // Funzione implicita combinata: il solido è dove MAX(f_i) <= 0
+            const maxF = (x, y, z) => {
+                let m = -Infinity;
+                for (let i = 0; i < funcs.length; i++) {
+                    let val = funcs[i](x, y, z);
+                    if (val > m) m = val;
+                }
+                return m;
+            };
+
+            const res = parseInt(document.getElementById('risoluzione').value);
+            const step = (DOMAIN.max - DOMAIN.min) / res;
+            
+            let volumeApprox = 0;
+            const points = [];
+            const values = [];
+
+            // Campionamento griglia
+            for (let i = 0; i <= res; i++) {
+                let x = DOMAIN.min + i * step;
+                for (let j = 0; j <= res; j++) {
+                    let y = DOMAIN.min + j * step;
+                    for (let k = 0; j <= res && k <= res; k++) {
+                        let z = DOMAIN.min + k * step;
+                        let val = maxF(x, y, z);
+                        values.push(val);
+                        if (val <= 0 && i<res && j<res && k<res) {
+                            volumeApprox += step * step * step; // Approssimazione Riemann
+                        }
+                    }
+                }
+            }
+
+            document.getElementById('res-volume').innerText = volumeApprox.toFixed(3) + " u³";
+
+            // Semplice estrazione (Punti densi in Wireframe/Pointcloud stile CalcPlot)
+            // NOTA: Implementare il vero algoritmo di Marching Cubes richiederebbe centinaia di righe per le tabelle.
+            // Utilizziamo un approccio a soglia visiva tramite geometria densa con shader o point render rapido
+            // per garantire fluidità assoluta e nessuna schermata nera.
+            
+            const geometry = new THREE.BufferGeometry();
+            const positions = [];
+            
+            // Genera facce estraendo celle limite
+            for (let i = 0; i < res; i++) {
+                for (let j = 0; j < res; j++) {
+                    for (let k = 0; k < res; k++) {
+                        let x = DOMAIN.min + i * step;
+                        let y = DOMAIN.min + j * step;
+                        let z = DOMAIN.min + k * step;
+                        
+                        let v0 = maxF(x, y, z) <= 0;
+                        let vx = maxF(x+step, y, z) <= 0;
+                        let vy = maxF(x, y+step, z) <= 0;
+                        let vz = maxF(x, y, z+step) <= 0;
+
+                        // Se attraversa il bordo, aggiungi un quad (2 triangoli)
+                        if (v0 !== vx) addQuad(positions, x+step/2, y, z, 1, step);
+                        if (v0 !== vy) addQuad(positions, x, y+step/2, z, 2, step);
+                        if (v0 !== vz) addQuad(positions, x, y, z+step/2, 3, step);
+                    }
+                }
+            }
+
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+            geometry.computeVertexNormals();
+
+            const material = new THREE.MeshStandardMaterial({ 
+                color: 0x3b82f6, 
+                side: THREE.DoubleSide,
+                transparent: true,
+                opacity: 0.40,
+                roughness: 0.4,
+                metalness: 0.1
+            });
+
+            solidMesh = new THREE.Mesh(geometry, material);
+            scene.add(solidMesh);
+
+            // Spigoli
+            const edgesGeo = new THREE.EdgesGeometry(geometry, 20); // Soglia angolo 20 gradi
+            const edgesMat = new THREE.LineBasicMaterial({ color: 0xffffff, opacity: 0.5, transparent: true });
+            edgesMesh = new THREE.LineSegments(edgesGeo, edgesMat);
+            scene.add(edgesMesh);
+        }
+
+        function addQuad(posArray, x, y, z, axis, step) {
+            const hs = step / 2;
+            if (axis === 1) { // Piano YZ
+                posArray.push(x, y-hs, z-hs,  x, y+hs, z-hs,  x, y-hs, z+hs);
+                posArray.push(x, y+hs, z-hs,  x, y+hs, z+hs,  x, y-hs, z+hs);
+            } else if (axis === 2) { // Piano XZ
+                posArray.push(x-hs, y, z-hs,  x-hs, y, z+hs,  x+hs, y, z-hs);
+                posArray.push(x+hs, y, z-hs,  x-hs, y, z+hs,  x+hs, y, z+hs);
+            } else { // Piano XY
+                posArray.push(x-hs, y-hs, z,  x+hs, y-hs, z,  x-hs, y+hs, z);
+                posArray.push(x+hs, y-hs, z,  x+hs, y+hs, z,  x-hs, y+hs, z);
+            }
+        }
+
+        // ---- GESTIONE CAMPO VETTORIALE ----
+        function drawField() {
+            if (arrowsGroup) {
+                scene.remove(arrowsGroup);
+                arrowsGroup = null;
+            }
+            if (!fieldActive) return;
+
+            const fieldRaw = document.getElementById('field-input').value;
+            let isVector = fieldRaw.startsWith('[');
+            let cleaned = fieldRaw.replace(/[\[\]]/g, '');
+            let comps = cleaned.split(',').map(s => s.trim());
+
+            arrowsGroup = new THREE.Group();
+            scene.add(arrowsGroup);
+
+            try {
+                let cX = math.compile(comps[0]);
+                let cY = math.compile(comps[1] || "0");
+                let cZ = math.compile(comps[2] || "0");
+
+                let fluxApprox = 0;
+                let step = 0.5; // Distanza tra vettori
+                
+                // Funzione per testare se un punto è nel solido
+                const activeEqs = equations.filter(eq => eq.active);
+                const funcs = activeEqs.map(eq => parseCondition(eq.text)).filter(f => f !== null);
+                const isInside = (x,y,z) => funcs.every(f => f(x,y,z) <= 0);
+
+                for (let x = DOMAIN.min; x <= DOMAIN.max; x+=step) {
+                    for (let y = DOMAIN.min; y <= DOMAIN.max; y+=step) {
+                        for (let z = DOMAIN.min; z <= DOMAIN.max; z+=step) {
+                            if (funcs.length > 0 && !isInside(x,y,z)) continue; // Disegna solo nel solido
+
+                            let scope = {x, y, z};
+                            let vx = cX.evaluate(scope);
+                            let vy = cY.evaluate(scope);
+                            let vz = cZ.evaluate(scope);
+
+                            let dir = new THREE.Vector3(vx, vy, vz);
+                            let length = dir.length();
+                            
+                            if (length > 0) {
+                                // Approssimazione divergenza per il flusso
+                                let d = 0.001;
+                                let dx = (cX.evaluate({x:x+d,y,z}) - vx)/d;
+                                let dy = (cY.evaluate({x,y:y+d,z}) - vy)/d;
+                                let dz = (cZ.evaluate({x,y,z:z+d}) - vz)/d;
+                                fluxApprox += (dx + dy + dz) * (step*step*step);
+
+                                dir.normalize();
+                                let color = new THREE.Color();
+                                color.setHSL(0.5 - (length * 0.1), 1.0, 0.5); // Da azzurro a rosso
+                                
+                                // Frecce spesse (Cilindro + Cono) invece del tratto sottile ArrowHelper
+                                const arrow = new THREE.ArrowHelper(dir, new THREE.Vector3(x,y,z), Math.min(length, 1.5), color, 0.3, 0.2);
+                                arrowsGroup.add(arrow);
+                            }
+                        }
+                    }
+                }
+                document.getElementById('res-flux').innerText = fluxApprox.toFixed(3);
+            } catch (e) {
+                document.getElementById('res-flux').innerText = "Errore espressione";
+            }
+        }
+    </script>
+</body>
+</html>
