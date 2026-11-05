@@ -3,133 +3,127 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Motore Grafico 3D - Myco Zennaro</title>
-    <!-- Tailwind CSS -->
+    <title>Motore Grafico 3D Avanzato - Myco Zennaro</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Math.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.8.0/math.min.js"></script>
-    <!-- Three.js & OrbitControls -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <style>
-        body { margin: 0; overflow: hidden; background-color: #0f172a; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        body { margin: 0; overflow: hidden; background-color: #0f172a; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         #canvas-container { width: 100%; height: 100%; }
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
         
-        /* Controlli UI Stile GeoGebra */
         .geogebra-dot { width: 16px; height: 16px; border-radius: 50%; display: inline-block; cursor: pointer; border: 2px solid #3b82f6; transition: 0.2s; }
         .geogebra-dot.active { background-color: #3b82f6; box-shadow: 0 0 8px rgba(59,130,246,0.6); }
         .geogebra-dot.field { border-color: #06b6d4; }
         .geogebra-dot.field.active { background-color: #06b6d4; box-shadow: 0 0 8px rgba(6,182,212,0.6); }
         
-        /* Input Color Personalizzato */
-        input[type="color"] { -webkit-appearance: none; border: none; padding: 0; width: 28px; height: 28px; border-radius: 6px; cursor: pointer; }
+        input[type="color"] { -webkit-appearance: none; border: none; padding: 0; width: 24px; height: 24px; border-radius: 4px; cursor: pointer; background: transparent; }
         input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
-        input[type="color"]::-webkit-color-swatch { border: 2px solid #475569; border-radius: 6px; }
+        input[type="color"]::-webkit-color-swatch { border: 1px solid #475569; border-radius: 4px; }
         
-        /* Isola Glassmorphism */
         .glass-island {
-            position: fixed;
-            bottom: 24px;
-            right: 24px;
-            background: rgba(30, 41, 59, 0.4);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
-            padding: 12px 20px;
-            color: rgba(255, 255, 255, 0.85);
-            font-size: 14px;
-            font-weight: 400;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            z-index: 1000;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-            transition: all 0.3s ease;
-            letter-spacing: 0.5px;
+            position: fixed; bottom: 24px; right: 24px; background: rgba(30, 41, 59, 0.6);
+            backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px;
+            padding: 12px 20px; color: rgba(255, 255, 255, 0.85); font-size: 13px;
+            display: flex; align-items: center; gap: 8px; z-index: 1000;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3); transition: all 0.3s ease;
         }
-        .glass-island:hover { background: rgba(30, 41, 59, 0.6); border-color: rgba(255, 255, 255, 0.2); }
-        .glass-island i { font-style: normal; font-size: 18px; color: #3b82f6; }
+        .glass-island:hover { background: rgba(30, 41, 59, 0.8); }
+        
+        .tab-btn { padding: 4px 12px; border-radius: 4px; font-size: 12px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+        .tab-btn.active { background-color: #3b82f6; color: white; }
+        .tab-btn.inactive { background-color: #334155; color: #94a3b8; }
     </style>
 </head>
 <body class="flex h-screen text-slate-100">
 
-    <!-- Pannello UI Sinistro -->
-    <div class="w-[400px] bg-slate-900 border-r border-slate-700 flex flex-col z-10 shadow-2xl overflow-y-auto">
+    <!-- UI Panel -->
+    <div class="w-[420px] bg-slate-900 border-r border-slate-700 flex flex-col z-10 shadow-2xl overflow-y-auto">
         
-        <!-- Header -->
-        <div class="p-5 border-b border-slate-700/50 flex justify-between items-center bg-slate-800/50">
-            <h1 class="text-lg font-bold text-white tracking-wide">Motore Grafico <span class="text-blue-500">3D</span></h1>
-            <button onclick="clearAll()" class="bg-slate-700 hover:bg-red-500 text-white text-xs px-3 py-1.5 rounded-md font-semibold transition-colors duration-200">Svuota Tutto</button>
+        <div class="p-5 border-b border-slate-700/50 flex justify-between items-center bg-slate-800/80">
+            <h1 class="text-lg font-bold text-white">Motore Grafico <span class="text-blue-500">3D</span></h1>
+            <button onclick="clearAll()" class="bg-slate-700 hover:bg-red-500 text-white text-xs px-3 py-1.5 rounded-md font-semibold transition-colors">Svuota</button>
         </div>
 
         <!-- Equazioni -->
         <div class="p-5 border-b border-slate-700/50">
-            <h2 class="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3">Disequazioni Solido</h2>
-            <div id="equations-list" class="space-y-2.5"></div>
+            <h2 class="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3">Disequazioni Solido & Colori</h2>
+            <div id="equations-list" class="space-y-2"></div>
             <button onclick="addEquation()" class="mt-4 text-blue-400 text-sm font-medium hover:text-blue-300 flex items-center transition">
-                + Aggiungi condizione
+                + Aggiungi faccia / condizione
             </button>
         </div>
 
-        <!-- Campo Vettoriale -->
+        <!-- Campo -->
         <div class="p-5 border-b border-slate-700/50">
-            <h2 class="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3">Campo Vettoriale / Scalare</h2>
+            <div class="flex justify-between items-center mb-3">
+                <h2 class="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Campo 3D</h2>
+                <div class="flex gap-1 bg-slate-800 p-1 rounded-md">
+                    <button id="tab-vector" onclick="setFieldType('vector')" class="tab-btn active">Vettoriale</button>
+                    <button id="tab-scalar" onclick="setFieldType('scalar')" class="tab-btn inactive">Scalare</button>
+                </div>
+            </div>
+            
             <div class="flex items-start gap-3 bg-slate-800/80 p-3 rounded-lg border border-slate-600/50 shadow-inner">
                 <div id="field-dot" class="geogebra-dot field mt-2" onclick="toggleField()"></div>
-                <div class="flex-1">
-                    <input type="text" id="field-input" class="w-full bg-transparent border-b border-slate-500/50 text-cyan-50 outline-none focus:border-cyan-400 font-mono text-sm py-1.5 transition" value="[ -y, x, z/2 ]" onchange="drawField()">
-                    <div class="text-xs text-slate-400 mt-2 flex justify-between items-center">
-                        <span id="field-status">Campo Spento</span>
-                        <span class="text-cyan-400 hover:text-cyan-300 cursor-pointer font-medium" onclick="toggleField()">ON / OFF</span>
+                <div class="flex-1 space-y-3">
+                    <input type="text" id="field-input" class="w-full bg-transparent border-b border-slate-500/50 text-cyan-50 outline-none focus:border-cyan-400 font-mono text-sm py-1" value="[ -y, x, z/2 ]" onchange="drawField()">
+                    
+                    <div id="scalar-options" style="display: none;">
+                        <label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
+                            <input type="checkbox" id="heatmap-toggle" class="accent-cyan-500" onchange="updateSolid()">
+                            Colora superfici con mappa termica
+                        </label>
+                    </div>
+
+                    <div class="space-y-2 pt-2 border-t border-slate-700/50">
+                        <div class="flex justify-between text-[11px] text-slate-400">
+                            <span>Densità Campo</span>
+                            <span id="val-density">Media</span>
+                        </div>
+                        <input type="range" id="fieldDensity" min="2" max="10" value="6" class="w-full accent-cyan-500 h-1" onchange="drawField()">
+                        
+                        <div class="flex justify-between text-[11px] text-slate-400">
+                            <span>Dimensione Vettori/Punti</span>
+                            <span id="val-scale">1.0x</span>
+                        </div>
+                        <input type="range" id="fieldScale" min="5" max="30" value="15" class="w-full accent-cyan-500 h-1" oninput="drawField()">
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Impostazioni Estetiche -->
-        <div class="p-5 border-b border-slate-700/50 space-y-5">
-            <h2 class="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1">Impostazioni Grafiche</h2>
+        <!-- Impostazioni -->
+        <div class="p-5 border-b border-slate-700/50 space-y-4">
+            <h2 class="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1">Motore Geometrico</h2>
             
-            <!-- Colore e Spigoli -->
-            <div class="flex items-center justify-between">
-                <label class="flex items-center gap-3 text-sm cursor-pointer text-slate-300 hover:text-white transition">
-                    <input type="checkbox" id="spigoli" checked class="w-4 h-4 accent-blue-500 rounded" onchange="updateSettings()">
-                    Evidenzia spigoli e curve
-                </label>
-                <input type="color" id="coloreSolido" value="#3b82f6" onchange="updateSettings()" title="Colore del solido">
-            </div>
+            <label class="flex items-center gap-3 text-sm cursor-pointer text-slate-300 hover:text-white transition">
+                <input type="checkbox" id="spigoli" checked class="w-4 h-4 accent-blue-500 rounded" onchange="updateSettings()">
+                Disegna Spigoli e Intersezioni
+            </label>
 
-            <!-- Cursori -->
             <div>
                 <div class="flex justify-between text-sm mb-1.5 text-slate-300">
-                    <span>Opacità Solido</span>
-                    <span id="val-opacity" class="font-mono text-xs text-blue-400">40%</span>
+                    <span>Trasparenza Globale</span>
+                    <span id="val-opacity" class="font-mono text-xs text-blue-400">60%</span>
                 </div>
-                <input type="range" id="opacita" min="0" max="100" value="40" class="w-full accent-blue-500" oninput="updateSettings()">
+                <input type="range" id="opacita" min="10" max="100" value="60" class="w-full accent-blue-500" oninput="updateSettings()">
             </div>
             
             <div>
                 <div class="flex justify-between text-sm mb-1.5 text-slate-300">
-                    <span>Qualità Superfici (Marching Tetrahedra)</span>
-                    <span id="val-res" class="font-mono text-xs text-blue-400">Max (40³)</span>
+                    <span>Risoluzione Griglia 3D</span>
+                    <span id="val-res" class="font-mono text-xs text-blue-400">Alta (50³)</span>
                 </div>
-                <input type="range" id="risoluzione" min="15" max="55" value="40" class="w-full accent-blue-500" onchange="updateSolid()">
-            </div>
-
-            <div id="arrow-settings" class="pt-3 border-t border-slate-700/50 opacity-50 pointer-events-none transition-opacity">
-                <div class="flex justify-between text-sm mb-1.5 text-slate-300">
-                    <span>Spessore Frecce 3D</span>
-                    <span id="val-arrow" class="font-mono text-xs text-cyan-400">1.2x</span>
-                </div>
-                <input type="range" id="spessoreFrecce" min="5" max="30" value="12" class="w-full accent-cyan-500" oninput="drawField()">
+                <input type="range" id="risoluzione" min="20" max="80" value="50" class="w-full accent-blue-500" onchange="updateSolid()">
             </div>
         </div>
 
-        <!-- Risultati Matematici -->
-        <div class="p-5 bg-slate-900 mt-auto shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.3)]">
+        <!-- Risultati -->
+        <div class="p-5 bg-slate-900 mt-auto">
             <h2 class="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3">Analisi Numerica</h2>
             <div class="space-y-3 text-sm bg-slate-800/50 p-4 rounded-lg border border-slate-700/50">
                 <div class="flex justify-between items-center">
@@ -138,25 +132,21 @@
                 </div>
                 <div class="h-px bg-slate-700/50 w-full"></div>
                 <div class="flex justify-between items-center">
-                    <span class="text-slate-300 font-mono text-xs">Flusso Uscente (∇·F)</span>
+                    <span class="text-slate-300 font-mono text-xs" id="flux-label">Flusso (∇·F)</span>
                     <span id="res-flux" class="font-mono text-cyan-400 font-bold">-</span>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Area 3D (WebGL) -->
+    <!-- WebGL Area -->
     <div id="canvas-container" class="flex-1 relative bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-slate-800 via-slate-900 to-black">
-        
-        <!-- Loading Overlay -->
-        <div id="loading" class="absolute inset-0 bg-slate-900/90 flex flex-col items-center justify-center z-20 transition-opacity duration-300" style="display: none;">
+        <div id="loading" class="absolute inset-0 bg-slate-900/90 flex flex-col items-center justify-center z-20 transition-opacity" style="display: none;">
             <div class="w-12 h-12 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin mb-4"></div>
-            <span class="text-white font-medium tracking-wide">Estrazione Superfici Lisce...</span>
+            <span class="text-white font-medium tracking-wide">Calcolo Gradienti Analitici e Superfici...</span>
         </div>
-        
-        <!-- Isola Copyright Glassmorphism -->
         <div class="glass-island">
-            <i>&copy;</i>
+            <span style="font-size: 16px; color:#3b82f6;">&copy;</span>
             <span>2026 Myco Zennaro - All rights reserved.</span>
         </div>
     </div>
@@ -164,19 +154,19 @@
     <script>
         // Stato e Dati Iniziali
         let equations = [
-            { id: 1, text: "x + y + z <= 4", active: true },
-            { id: 2, text: "x^2 + y^2 >= 1", active: true },
-            { id: 3, text: "x >= 0", active: true },
-            { id: 4, text: "y >= 0", active: true },
-            { id: 5, text: "z >= 0", active: true }
+            { id: 1, text: "x + y + z <= 4", color: "#3b82f6", active: true },
+            { id: 2, text: "x^2 + y^2 >= 1", color: "#ef4444", active: true },
+            { id: 3, text: "x >= 0", color: "#22c55e", active: true },
+            { id: 4, text: "y >= 0", color: "#eab308", active: true },
+            { id: 5, text: "z >= 0", color: "#a855f7", active: true }
         ];
         
         let fieldActive = false;
+        let fieldType = 'vector'; // vector | scalar
         let scene, camera, renderer, controls;
-        let solidMesh, edgesMesh, arrowsGroup;
-        const DOMAIN = { min: -1, max: 5 };
+        let solidMeshes = [], edgesGroup, fieldGroup;
+        const DOMAIN = { min: -1.2, max: 4.5 };
 
-        // Inizializzazione
         initThreeJS();
         renderUI();
         updateSolid();
@@ -187,399 +177,363 @@
             list.innerHTML = '';
             equations.forEach((eq, index) => {
                 list.innerHTML += `
-                    <div class="flex items-center gap-3 bg-slate-800/80 p-2 rounded-md border border-slate-700/50 hover:border-slate-600 transition">
-                        <div class="geogebra-dot ${eq.active ? 'active' : ''}" onclick="toggleEq(${index})"></div>
-                        <input type="text" class="flex-1 bg-transparent text-white outline-none font-mono text-sm py-1" 
-                               value="${eq.text}" onchange="updateEqText(${index}, this.value)" placeholder="Es: x^2 + y^2 <= 4">
-                        <button onclick="removeEq(${index})" class="text-slate-500 hover:text-red-400 text-xl font-light px-1 transition">×</button>
+                    <div class="flex items-center gap-3 bg-slate-800/80 p-2 rounded-md border border-slate-700/50">
+                        <div class="geogebra-dot flex-shrink-0 ${eq.active ? 'active' : ''}" onclick="toggleEq(${index})" style="${eq.active ? 'border-color:'+eq.color+'; background-color:'+eq.color : 'border-color:'+eq.color}"></div>
+                        <input type="text" class="flex-1 bg-transparent text-white outline-none font-mono text-sm py-1 min-w-0" 
+                               value="${eq.text}" onchange="updateEqText(${index}, this.value)">
+                        <input type="color" value="${eq.color}" onchange="updateEqColor(${index}, this.value)" title="Colore Faccia">
+                        <button onclick="removeEq(${index})" class="text-slate-500 hover:text-red-400 text-xl px-1">×</button>
                     </div>
                 `;
             });
             
-            const fieldDot = document.getElementById('field-dot');
-            const fieldStatus = document.getElementById('field-status');
-            const arrowSettings = document.getElementById('arrow-settings');
-            
-            if (fieldActive) {
-                fieldDot.className = "geogebra-dot field mt-2 active";
-                fieldStatus.innerText = "Campo Visibile";
-                fieldStatus.className = "text-cyan-400 font-medium";
-                arrowSettings.classList.remove("opacity-50", "pointer-events-none");
-            } else {
-                fieldDot.className = "geogebra-dot field mt-2";
-                fieldStatus.innerText = "Campo Spento";
-                fieldStatus.className = "text-slate-500";
-                arrowSettings.classList.add("opacity-50", "pointer-events-none");
-            }
+            document.getElementById('field-dot').className = `geogebra-dot field mt-2 ${fieldActive ? 'active' : ''}`;
         }
 
         function toggleEq(index) { equations[index].active = !equations[index].active; renderUI(); updateSolid(); }
         function updateEqText(index, text) { equations[index].text = text; updateSolid(); }
+        function updateEqColor(index, color) { equations[index].color = color; renderUI(); updateSettings(); }
         function removeEq(index) { equations.splice(index, 1); renderUI(); updateSolid(); }
-        function addEquation() { equations.push({ id: Date.now(), text: "", active: true }); renderUI(); }
-        
-        function clearAll() {
-            equations = [];
-            fieldActive = false;
-            document.getElementById('field-input').value = "";
-            renderUI();
-            updateSolid();
+        function addEquation() { 
+            const colors = ["#f97316", "#14b8a6", "#ec4899", "#8b5cf6", "#64748b"];
+            equations.push({ id: Date.now(), text: "", color: colors[equations.length % colors.length], active: true }); 
+            renderUI(); 
         }
+        
+        function clearAll() { equations = []; fieldActive = false; document.getElementById('field-input').value = ""; renderUI(); updateSolid(); }
 
-        function toggleField() {
-            fieldActive = !fieldActive;
-            renderUI();
-            drawField();
+        function toggleField() { fieldActive = !fieldActive; renderUI(); drawField(); }
+
+        function setFieldType(type) {
+            fieldType = type;
+            document.getElementById('tab-vector').className = `tab-btn ${type==='vector' ? 'active' : 'inactive'}`;
+            document.getElementById('tab-scalar').className = `tab-btn ${type==='scalar' ? 'active' : 'inactive'}`;
+            document.getElementById('scalar-options').style.display = type === 'scalar' ? 'block' : 'none';
+            document.getElementById('field-input').value = type === 'vector' ? "[ -y, x, z/2 ]" : "x + y + z";
+            document.getElementById('flux-label').innerText = type === 'vector' ? "Flusso (∇·F)" : "Valore Medio (Campo)";
+            if (document.getElementById('heatmap-toggle').checked) updateSolid(); else drawField();
         }
 
         function updateSettings() {
             const opacity = document.getElementById('opacita').value / 100;
             document.getElementById('val-opacity').innerText = Math.round(opacity * 100) + "%";
-            
-            const colorHex = document.getElementById('coloreSolido').value;
             const showEdges = document.getElementById('spigoli').checked;
 
-            if (solidMesh) {
-                solidMesh.material.color.set(colorHex);
-                solidMesh.material.opacity = opacity;
-                solidMesh.material.transparent = opacity < 1.0;
-                solidMesh.material.needsUpdate = true;
-            }
-            if (edgesMesh) edgesMesh.visible = showEdges;
+            solidMeshes.forEach((mesh, idx) => {
+                const eq = equations.find(e => e.id === mesh.userData.id);
+                if (eq && !mesh.userData.isHeatmap) mesh.material.color.set(eq.color);
+                mesh.material.opacity = opacity;
+                mesh.material.transparent = opacity < 1.0;
+            });
+            if (edgesGroup) edgesGroup.visible = showEdges;
         }
 
-        // ---- MOTORE GRAFICO 3D (Three.js) ----
+        // ---- MOTORE GRAFICO 3D ----
         function initThreeJS() {
             const container = document.getElementById('canvas-container');
             scene = new THREE.Scene();
             
-            // Assi personalizzati e griglia raffinata
-            const axesHelper = new THREE.AxesHelper(6);
-            scene.add(axesHelper);
+            scene.add(new THREE.AxesHelper(6));
+            const grid = new THREE.GridHelper(10, 20, 0x444444, 0x2a2a2a);
+            grid.rotation.x = Math.PI / 2; scene.add(grid);
 
-            const gridHelper = new THREE.GridHelper(10, 20, 0x444444, 0x2a2a2a);
-            gridHelper.rotation.x = Math.PI / 2; 
-            scene.add(gridHelper);
-
-            // Illuminazione da Studio Professionale
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
-            scene.add(ambientLight);
-            
-            const dirLight1 = new THREE.DirectionalLight(0xffffff, 0.8);
-            dirLight1.position.set(10, 20, 10);
-            scene.add(dirLight1);
-            
-            const dirLight2 = new THREE.DirectionalLight(0x90b0ff, 0.5);
-            dirLight2.position.set(-10, -10, 10);
-            scene.add(dirLight2);
+            // Luci fisiche per evidenziare la curvatura liscia
+            scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+            const d1 = new THREE.DirectionalLight(0xffffff, 0.8); d1.position.set(10, 20, 10); scene.add(d1);
+            const d2 = new THREE.DirectionalLight(0x90b0ff, 0.6); d2.position.set(-10, -10, 10); scene.add(d2);
 
             camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 100);
-            camera.position.set(7, 7, 6);
-            camera.up.set(0, 0, 1); // Z è l'altezza come in Analisi Matematica
+            camera.position.set(7, 7, 5);
+            camera.up.set(0, 0, 1);
 
             renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
             renderer.setSize(container.clientWidth, container.clientHeight);
-            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Ottimizzazione display Retina
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             container.appendChild(renderer.domElement);
 
             controls = new THREE.OrbitControls(camera, renderer.domElement);
-            controls.enableDamping = true;
-            controls.dampingFactor = 0.08;
+            controls.enableDamping = true; controls.dampingFactor = 0.08;
 
             window.addEventListener('resize', () => {
                 camera.aspect = container.clientWidth / container.clientHeight;
                 camera.updateProjectionMatrix();
                 renderer.setSize(container.clientWidth, container.clientHeight);
             });
-
             animate();
         }
 
-        function animate() {
-            requestAnimationFrame(animate);
-            controls.update();
-            renderer.render(scene, camera);
-        }
+        function animate() { requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera); }
 
-        // ---- PARSER MATEMATICO ----
+        // ---- PARSER ----
         function parseCondition(text) {
             if (!text.trim()) return null;
             try {
-                // Converte tutte le disequazioni in forma f(x,y,z) <= 0
                 let expr = text.replace('<=', '-(').replace('>=', '-(').replace('<', '-(').replace('>', '-(');
                 if (text.includes('<') || text.includes('>')) expr += ')';
-                
-                if (text.includes('>=')) {
-                    let parts = text.split('>=');
-                    expr = `(${parts[1]}) - (${parts[0]})`;
-                } else if (text.includes('>')) {
-                    let parts = text.split('>');
-                    expr = `(${parts[1]}) - (${parts[0]})`;
-                } else if (text.includes('<=')) {
-                    let parts = text.split('<=');
-                    expr = `(${parts[0]}) - (${parts[1]})`;
-                }
+                if (text.includes('>=')) { let p = text.split('>='); expr = `(${p[1]}) - (${p[0]})`; }
+                else if (text.includes('>')) { let p = text.split('>'); expr = `(${p[1]}) - (${p[0]})`; }
+                else if (text.includes('<=')) { let p = text.split('<='); expr = `(${p[0]}) - (${p[1]})`; }
                 const compiled = math.compile(expr);
                 return (x, y, z) => compiled.evaluate({x, y, z});
-            } catch (e) {
-                return null;
-            }
+            } catch (e) { return null; }
         }
 
         function updateSolid() {
             const loader = document.getElementById('loading');
-            loader.style.display = 'flex';
-            loader.style.opacity = '1';
-            
-            // Rilascio il thread principale per far apparire il loader
+            loader.style.display = 'flex'; loader.style.opacity = '1';
             setTimeout(() => {
-                generateGeometryContinua();
+                generateSmoothGeometry();
                 updateSettings();
+                drawField();
                 loader.style.opacity = '0';
                 setTimeout(() => { loader.style.display = 'none'; }, 300);
             }, 50);
         }
 
-        // ---- MOTORE SUPERFICI CONTINUE LISCE (Marching Tetrahedra) ----
-        function generateGeometryContinua() {
-            if (solidMesh) scene.remove(solidMesh);
-            if (edgesMesh) scene.remove(edgesMesh);
-            document.getElementById('res-volume').innerText = "Calcolo...";
-
+        // ---- ESTRAZIONE SUPERFICI INDIPENDENTI E GRADIENTI (IL SEGRETO DELLA LISCEZZA) ----
+        function generateSmoothGeometry() {
+            solidMeshes.forEach(m => scene.remove(m)); solidMeshes = [];
+            if (edgesGroup) scene.remove(edgesGroup);
+            edgesGroup = new THREE.Group(); scene.add(edgesGroup);
+            
             const activeEqs = equations.filter(eq => eq.active && eq.text.trim() !== "");
-            const funcs = activeEqs.map(eq => parseCondition(eq.text)).filter(f => f !== null);
+            const parsedEqs = activeEqs.map(eq => ({ id: eq.id, f: parseCondition(eq.text), color: eq.color })).filter(e => e.f !== null);
 
-            if (funcs.length === 0) {
-                document.getElementById('res-volume').innerText = "Spazio vuoto";
-                if (arrowsGroup) { scene.remove(arrowsGroup); arrowsGroup = null; }
-                return;
-            }
-
-            // Funzione implicit field combinata
-            const maxF = (x, y, z) => {
-                let m = -Infinity;
-                for (let i = 0; i < funcs.length; i++) {
-                    let val = funcs[i](x, y, z);
-                    if (val > m) m = val;
-                }
-                return m;
-            };
+            if (parsedEqs.length === 0) { document.getElementById('res-volume').innerText = "Vuoto"; return; }
 
             const res = parseInt(document.getElementById('risoluzione').value);
-            document.getElementById('val-res').innerText = (res >= 50 ? "Ultra" : (res >= 35 ? "Max" : "Standard")) + ` (${res}³)`;
-            
+            document.getElementById('val-res').innerText = (res >= 60 ? "Ultra" : (res >= 45 ? "Alta" : "Media")) + ` (${res}³)`;
             const step = (DOMAIN.max - DOMAIN.min) / res;
-            let volumeApprox = 0;
-            const positions = [];
             
-            // Interpolazione precisa lungo i lati del tetraedro
+            // Calcolo Volume
+            let volume = 0;
+            for(let x=DOMAIN.min; x<DOMAIN.max; x+=step) {
+                for(let y=DOMAIN.min; y<DOMAIN.max; y+=step) {
+                    for(let z=DOMAIN.min; z<DOMAIN.max; z+=step) {
+                        if (parsedEqs.every(eq => eq.f(x,y,z) <= 0)) volume += step*step*step;
+                    }
+                }
+            }
+            document.getElementById('res-volume').innerText = volume.toFixed(3) + " u³";
+
+            // Se Heatmap è attiva, prepariamo il campo scalare
+            const useHeatmap = fieldType === 'scalar' && document.getElementById('heatmap-toggle').checked;
+            let scalarFunc = null;
+            if (useHeatmap) {
+                try { scalarFunc = math.compile(document.getElementById('field-input').value); } catch(e) {}
+            }
+
+            const tetrahedrons = [[0,1,2,6], [0,2,3,6], [0,1,6,5], [0,4,5,6], [0,3,7,6], [0,4,6,7]];
             const lerp = (p1, p2, v1, v2) => {
                 if (Math.abs(v1 - v2) < 1e-6) return p1;
                 let t = (0 - v1) / (v2 - v1);
-                return { x: p1.x + t * (p2.x - p1.x), y: p1.y + t * (p2.y - p1.y), z: p1.z + t * (p2.z - p1.z) };
+                return { x: p1.x + t*(p2.x - p1.x), y: p1.y + t*(p2.y - p1.y), z: p1.z + t*(p2.z - p1.z) };
             };
 
-            // Pattern dei 6 Tetraedri che compongono un cubo perfetto
-            const tetrahedrons = [
-                [0,1,2,6], [0,2,3,6], [0,1,6,5], [0,4,5,6], [0,3,7,6], [0,4,6,7]
-            ];
+            // Estrazione SUPERFICIE PER SUPERFICIE (Garantisce facce separate e colori indipendenti)
+            parsedEqs.forEach((currentEq, idx) => {
+                const f = currentEq.f;
+                // Le altre funzioni fungono da limiti (clipping)
+                const bounds = parsedEqs.filter(e => e.id !== currentEq.id).map(e => e.f);
+                
+                const positions = [];
+                const normals = [];
+                const colors = [];
 
-            // Scandisce lo spazio e genera triangoli esatti
-            for (let i = 0; i < res; i++) {
-                for (let j = 0; j < res; j++) {
-                    for (let k = 0; k < res; k++) {
-                        let x = DOMAIN.min + i * step;
-                        let y = DOMAIN.min + j * step;
-                        let z = DOMAIN.min + k * step;
+                // Gradiente Analitico per Normali PERFETTAMENTE LISCE
+                const getNormal = (x, y, z) => {
+                    const eps = 0.001;
+                    const nx = f(x+eps, y, z) - f(x-eps, y, z);
+                    const ny = f(x, y+eps, z) - f(x, y-eps, z);
+                    const nz = f(x, y, z+eps) - f(x, y, z-eps);
+                    const len = Math.sqrt(nx*nx + ny*ny + nz*nz) || 1;
+                    return [nx/len, ny/len, nz/len];
+                };
 
-                        let corners = [
-                            {x:x, y:y, z:z}, {x:x+step, y:y, z:z}, {x:x+step, y:y+step, z:z}, {x:x, y:y+step, z:z},
-                            {x:x, y:y, z:z+step}, {x:x+step, y:y, z:z+step}, {x:x+step, y:y+step, z:z+step}, {x:x, y:y+step, z:z+step}
-                        ];
-                        let vals = corners.map(c => maxF(c.x, c.y, c.z));
-                        
-                        // Approssimazione Riemanniana del Volume
-                        if (vals[0] <= 0) volumeApprox += step * step * step;
+                const addVertex = (p) => {
+                    positions.push(p.x, p.y, p.z);
+                    const n = getNormal(p.x, p.y, p.z);
+                    normals.push(n[0], n[1], n[2]);
+                    if (useHeatmap && scalarFunc) {
+                        try {
+                            let val = scalarFunc.evaluate({x: p.x, y: p.y, z: p.z});
+                            let col = new THREE.Color().setHSL(0.6 - Math.max(0, Math.min(val*0.1, 0.6)), 1.0, 0.5);
+                            colors.push(col.r, col.g, col.b);
+                        } catch(e) { colors.push(1,1,1); }
+                    }
+                };
 
-                        // Estrazione superficie via Tetraedri
-                        for (let t = 0; t < 6; t++) {
-                            let idx = tetrahedrons[t];
-                            let pts = idx.map(id => corners[id]);
-                            let v = idx.map(id => vals[id]);
+                // Offset casuale microscopico per evitare collisioni perfette con la griglia
+                const off = (Math.random() - 0.5) * 0.001;
 
-                            // Ordina dal più "interno" al più "esterno"
-                            let sorted = [0,1,2,3].sort((a,b) => v[a] - v[b]);
-                            let vA = v[sorted[0]], pA = pts[sorted[0]];
-                            let vB = v[sorted[1]], pB = pts[sorted[1]];
-                            let vC = v[sorted[2]], pC = pts[sorted[2]];
-                            let vD = v[sorted[3]], pD = pts[sorted[3]];
+                for (let i = 0; i < res; i++) {
+                    for (let j = 0; j < res; j++) {
+                        for (let k = 0; k < res; k++) {
+                            let x = DOMAIN.min + i*step + off, y = DOMAIN.min + j*step + off, z = DOMAIN.min + k*step + off;
+                            let corners = [
+                                {x:x, y:y, z:z}, {x:x+step, y:y, z:z}, {x:x+step, y:y+step, z:z}, {x:x, y:y+step, z:z},
+                                {x:x, y:y, z:z+step}, {x:x+step, y:y, z:z+step}, {x:x+step, y:y+step, z:z+step}, {x:x, y:y+step, z:z+step}
+                            ];
+                            let vals = corners.map(c => f(c.x, c.y, c.z));
+                            
+                            // Salta se il blocco è completamente fuori dagli altri confini
+                            let blockValid = true;
+                            for(let b of bounds) {
+                                let bVals = corners.map(c => b(c.x, c.y, c.z));
+                                if (bVals.every(v => v > 0.05)) { blockValid = false; break; }
+                            }
+                            if(!blockValid) continue;
 
-                            // Se la superficie (0) taglia il tetraedro
-                            if (vA <= 0 && vD > 0) {
-                                if (vB > 0) {
-                                    // 1 dentro, 3 fuori -> Triangolo Singolo
-                                    let p1 = lerp(pA, pB, vA, vB);
-                                    let p2 = lerp(pA, pC, vA, vC);
-                                    let p3 = lerp(pA, pD, vA, vD);
-                                    positions.push(p1.x, p1.y, p1.z, p2.x, p2.y, p2.z, p3.x, p3.y, p3.z);
-                                } else if (vC > 0) {
-                                    // 2 dentro, 2 fuori -> Quadrilatero (2 Triangoli)
-                                    let p1 = lerp(pA, pC, vA, vC);
-                                    let p2 = lerp(pA, pD, vA, vD);
-                                    let p3 = lerp(pB, pC, vB, vC);
-                                    let p4 = lerp(pB, pD, vB, vD);
-                                    positions.push(p1.x, p1.y, p1.z, p3.x, p3.y, p3.z, p2.x, p2.y, p2.z);
-                                    positions.push(p2.x, p2.y, p2.z, p3.x, p3.y, p3.z, p4.x, p4.y, p4.z);
-                                } else {
-                                    // 3 dentro, 1 fuori -> Triangolo Singolo (Invertito)
-                                    let p1 = lerp(pD, pA, vD, vA);
-                                    let p2 = lerp(pD, pB, vD, vB);
-                                    let p3 = lerp(pD, pC, vD, vC);
-                                    positions.push(p1.x, p1.y, p1.z, p2.x, p2.y, p2.z, p3.x, p3.y, p3.z);
+                            for (let t = 0; t < 6; t++) {
+                                let pts = tetrahedrons[t].map(id => corners[id]);
+                                let v = tetrahedrons[t].map(id => vals[id]);
+                                let sorted = [0,1,2,3].sort((a,b) => v[a] - v[b]);
+                                let vA = v[sorted[0]], pA = pts[sorted[0]];
+                                let vB = v[sorted[1]], pB = pts[sorted[1]];
+                                let vC = v[sorted[2]], pC = pts[sorted[2]];
+                                let vD = v[sorted[3]], pD = pts[sorted[3]];
+
+                                let triPts = [];
+                                if (vA <= 0 && vD > 0) {
+                                    if (vB > 0) {
+                                        triPts.push([lerp(pA,pB,vA,vB), lerp(pA,pC,vA,vC), lerp(pA,pD,vA,vD)]);
+                                    } else if (vC > 0) {
+                                        let p1=lerp(pA,pC,vA,vC), p2=lerp(pA,pD,vA,vD), p3=lerp(pB,pC,vB,vC), p4=lerp(pB,pD,vB,vD);
+                                        triPts.push([p1, p3, p2], [p2, p3, p4]);
+                                    } else {
+                                        triPts.push([lerp(pD,pA,vD,vA), lerp(pD,pB,vD,vB), lerp(pD,pC,vD,vC)]);
+                                    }
+                                }
+
+                                // Clipping dei triangoli contro le altre equazioni
+                                triPts.forEach(tri => {
+                                    let c1 = tri[0], c2 = tri[1], c3 = tri[2];
+                                    let center = {x:(c1.x+c2.x+c3.x)/3, y:(c1.y+c2.y+c3.y)/3, z:(c1.z+c2.z+c3.z)/3};
+                                    // Se il centro del triangolo soddisfa tutte le altre disequazioni, lo teniamo
+                                    if (bounds.every(b => b(center.x, center.y, center.z) <= 0.02)) {
+                                        addVertex(c1); addVertex(c2); addVertex(c3);
+                                    }
+                                });
+                            }
+                        }
+                    }
+                }
+
+                if (positions.length > 0) {
+                    const geo = new THREE.BufferGeometry();
+                    geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+                    geo.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3)); // NORMALI ANALITICHE
+                    
+                    let matOpts = { side: THREE.DoubleSide, transparent: true, roughness: 0.2, metalness: 0.1 };
+                    
+                    if (useHeatmap && colors.length > 0) {
+                        geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+                        matOpts.vertexColors = true;
+                    } else {
+                        matOpts.color = currentEq.color;
+                    }
+
+                    const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial(matOpts));
+                    mesh.userData = { id: currentEq.id, isHeatmap: useHeatmap };
+                    solidMeshes.push(mesh);
+                    scene.add(mesh);
+
+                    // Contorni (Nascondono le frastagliature del clipping booleano)
+                    const edgeGeo = new THREE.EdgesGeometry(geo, 30);
+                    const edgeMat = new THREE.LineBasicMaterial({ color: 0xffffff, opacity: 0.5, transparent: true });
+                    edgesGroup.add(new THREE.LineSegments(edgeGeo, edgeMat));
+                }
+            });
+        }
+
+        // ---- CAMPO VETTORIALE E SCALARE ----
+        function drawField() {
+            if (fieldGroup) { scene.remove(fieldGroup); fieldGroup = null; }
+            document.getElementById('res-flux').innerText = "-";
+            if (!fieldActive) return;
+            if (fieldType === 'scalar' && document.getElementById('heatmap-toggle').checked) return;
+
+            const fieldRaw = document.getElementById('field-input').value;
+            fieldGroup = new THREE.Group(); scene.add(fieldGroup);
+
+            const activeEqs = equations.filter(eq => eq.active);
+            const funcs = activeEqs.map(eq => parseCondition(eq.text)).filter(f => f !== null);
+            const isInside = (x,y,z) => funcs.every(f => f(x,y,z) <= 0);
+
+            let densityVal = parseInt(document.getElementById('fieldDensity').value);
+            let scaleVal = parseInt(document.getElementById('fieldScale').value) / 15;
+            document.getElementById('val-density').innerText = densityVal < 4 ? "Bassa" : (densityVal > 7 ? "Alta" : "Media");
+            document.getElementById('val-scale').innerText = scaleVal.toFixed(1) + "x";
+
+            let step = (DOMAIN.max - DOMAIN.min) / densityVal;
+            let metricTotal = 0, count = 0;
+
+            try {
+                if (fieldType === 'vector') {
+                    let comps = fieldRaw.replace(/[\[\]]/g, '').split(',').map(s => s.trim());
+                    let cX = math.compile(comps[0]||"0"), cY = math.compile(comps[1]||"0"), cZ = math.compile(comps[2]||"0");
+
+                    for(let x=DOMAIN.min; x<=DOMAIN.max; x+=step) {
+                        for(let y=DOMAIN.min; y<=DOMAIN.max; y+=step) {
+                            for(let z=DOMAIN.min; z<=DOMAIN.max; z+=step) {
+                                if (funcs.length>0 && !isInside(x,y,z)) continue;
+
+                                let vx=cX.evaluate({x,y,z}), vy=cY.evaluate({x,y,z}), vz=cZ.evaluate({x,y,z});
+                                let dir = new THREE.Vector3(vx,vy,vz); let len = dir.length();
+                                
+                                if (len > 0) {
+                                    let d = 0.001;
+                                    let div = ((cX.evaluate({x:x+d,y,z})-vx)/d) + ((cY.evaluate({x,y:y+d,z})-vy)/d) + ((cZ.evaluate({x,y,z:z+d})-vz)/d);
+                                    metricTotal += div * (step*step*step); // Flusso
+
+                                    dir.normalize();
+                                    let col = new THREE.Color().setHSL(0.6 - Math.min(len*0.1, 0.6), 1.0, 0.5);
+                                    
+                                    // Frecce spesse
+                                    const rad = 0.02 * scaleVal;
+                                    const arrGroup = new THREE.Group();
+                                    const cyl = new THREE.Mesh(new THREE.CylinderGeometry(rad, rad, len*0.4*scaleVal), new THREE.MeshBasicMaterial({color:col}));
+                                    cyl.position.y = (len*0.4*scaleVal)/2; arrGroup.add(cyl);
+                                    const cone = new THREE.Mesh(new THREE.ConeGeometry(rad*3, len*0.2*scaleVal), new THREE.MeshBasicMaterial({color:col}));
+                                    cone.position.y = (len*0.4*scaleVal) + (len*0.1*scaleVal); arrGroup.add(cone);
+                                    
+                                    arrGroup.position.set(x,y,z);
+                                    arrGroup.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), dir);
+                                    fieldGroup.add(arrGroup);
                                 }
                             }
                         }
                     }
-                }
-            }
+                    document.getElementById('res-flux').innerText = metricTotal.toFixed(3);
 
-            document.getElementById('res-volume').innerText = volumeApprox.toFixed(3) + " u³";
-
-            // Creazione Mesh Liscia
-            const geometry = new THREE.BufferGeometry();
-            geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-            geometry.computeVertexNormals(); // Genera normali per l'illuminazione liscia
-
-            const colorHex = document.getElementById('coloreSolido').value;
-            const opacity = document.getElementById('opacita').value / 100;
-            
-            // Materiale con riflessi fisici PBR
-            const material = new THREE.MeshStandardMaterial({ 
-                color: colorHex, 
-                side: THREE.DoubleSide,
-                transparent: opacity < 1.0, 
-                opacity: opacity, 
-                roughness: 0.3, 
-                metalness: 0.15,
-                polygonOffset: true,
-                polygonOffsetFactor: 1,
-                polygonOffsetUnits: 1
-            });
-
-            solidMesh = new THREE.Mesh(geometry, material);
-            scene.add(solidMesh);
-
-            // Evidenziazione degli spigoli e dei contorni curvi
-            const edgesGeo = new THREE.EdgesGeometry(geometry, 25); // Angolo per rilevare lo spigolo
-            const edgesMat = new THREE.LineBasicMaterial({ color: 0xffffff, opacity: 0.4, transparent: true });
-            edgesMesh = new THREE.LineSegments(edgesGeo, edgesMat);
-            edgesMesh.visible = document.getElementById('spigoli').checked;
-            scene.add(edgesMesh);
-            
-            // Ridimensiona e rigenera i vettori all'interno del nuovo volume
-            drawField();
-        }
-
-        // ---- FRECCE 3D VOLUMETRICHE (Campo Vettoriale) ----
-        function create3DArrow(origin, direction, length, colorHex, thicknessFactor) {
-            const group = new THREE.Group();
-            
-            // Spessore calcolato dal cursore
-            const radCyl = 0.015 * thicknessFactor;
-            const radCone = 0.045 * thicknessFactor;
-            
-            const mat = new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.2, metalness: 0.1 });
-            
-            // Fusto (Cilindro)
-            const cylLen = length * 0.7;
-            const cylGeo = new THREE.CylinderGeometry(radCyl, radCyl, cylLen, 8);
-            const cyl = new THREE.Mesh(cylGeo, mat);
-            cyl.position.y = cylLen / 2;
-            group.add(cyl);
-            
-            // Punta (Cono)
-            const coneLen = length * 0.3;
-            const coneGeo = new THREE.ConeGeometry(radCone, coneLen, 12);
-            const cone = new THREE.Mesh(coneGeo, mat);
-            cone.position.y = cylLen + (coneLen / 2);
-            group.add(cone);
-            
-            // Posiziona e ruota
-            group.position.copy(origin);
-            const quaternion = new THREE.Quaternion();
-            quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction.clone().normalize());
-            group.quaternion.copy(quaternion);
-            
-            return group;
-        }
-
-        function drawField() {
-            if (arrowsGroup) { scene.remove(arrowsGroup); arrowsGroup = null; }
-            document.getElementById('res-flux').innerText = "-";
-            if (!fieldActive) return;
-
-            const fieldRaw = document.getElementById('field-input').value;
-            let cleaned = fieldRaw.replace(/[\[\]]/g, '');
-            let comps = cleaned.split(',').map(s => s.trim());
-
-            arrowsGroup = new THREE.Group();
-            scene.add(arrowsGroup);
-
-            try {
-                let cX = math.compile(comps[0] || "0");
-                let cY = math.compile(comps[1] || "0");
-                let cZ = math.compile(comps[2] || "0");
-
-                const activeEqs = equations.filter(eq => eq.active);
-                const funcs = activeEqs.map(eq => parseCondition(eq.text)).filter(f => f !== null);
-                
-                // Un punto è nel solido se soddisfa tutte le disequazioni
-                const isInside = (x,y,z) => funcs.every(f => f(x,y,z) <= 0);
-
-                let fluxApprox = 0;
-                let step = 0.6; // Densità della griglia dei vettori
-                
-                const thicknessBase = document.getElementById('spessoreFrecce').value / 10;
-                document.getElementById('val-arrow').innerText = thicknessBase.toFixed(1) + "x";
-
-                for (let x = DOMAIN.min; x <= DOMAIN.max; x+=step) {
-                    for (let y = DOMAIN.min; y <= DOMAIN.max; y+=step) {
-                        for (let z = DOMAIN.min; z <= DOMAIN.max; z+=step) {
-                            
-                            // Disegna la freccia solo se il punto cade all'interno del volume
-                            if (funcs.length > 0 && !isInside(x,y,z)) continue;
-
-                            let vx = cX.evaluate({x,y,z});
-                            let vy = cY.evaluate({x,y,z});
-                            let vz = cZ.evaluate({x,y,z});
-                            
-                            let dir = new THREE.Vector3(vx, vy, vz);
-                            let length = dir.length();
-                            
-                            if (length > 0) {
-                                // Approssimazione derivate parziali per calcolo Flusso (Teorema Divergenza)
-                                let d = 0.001;
-                                let dx = (cX.evaluate({x:x+d,y,z}) - vx)/d;
-                                let dy = (cY.evaluate({x,y:y+d,z}) - vy)/d;
-                                let dz = (cZ.evaluate({x,y,z:z+d}) - vz)/d;
-                                fluxApprox += (dx + dy + dz) * (step*step*step);
-
-                                // Mappatura colore termica (Ciano -> Blu -> Viola -> Rosa)
-                                let colorObj = new THREE.Color();
-                                colorObj.setHSL(0.55 - Math.min(length*0.1, 0.55), 1.0, 0.6);
-                                
-                                // Crea la freccia 3D solida
-                                const arrowScale = Math.min(length * 0.5, 1.2); 
-                                const arrow = create3DArrow(new THREE.Vector3(x,y,z), dir, arrowScale, colorObj.getHex(), thicknessBase);
-                                arrowsGroup.add(arrow);
+                } else {
+                    // Punti per il Campo Scalare
+                    let sFunc = math.compile(fieldRaw);
+                    const geo = new THREE.BufferGeometry();
+                    const pos = [], cols = [], sizes = [];
+                    
+                    for(let x=DOMAIN.min; x<=DOMAIN.max; x+=step*0.5) {
+                        for(let y=DOMAIN.min; y<=DOMAIN.max; y+=step*0.5) {
+                            for(let z=DOMAIN.min; z<=DOMAIN.max; z+=step*0.5) {
+                                if (funcs.length>0 && !isInside(x,y,z)) continue;
+                                let val = sFunc.evaluate({x,y,z});
+                                metricTotal += val; count++;
+                                pos.push(x,y,z);
+                                let col = new THREE.Color().setHSL(0.6 - Math.min(Math.abs(val)*0.1, 0.6), 1.0, 0.5);
+                                cols.push(col.r, col.g, col.b);
+                                sizes.push(scaleVal * 15);
                             }
                         }
                     }
+                    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+                    geo.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
+                    geo.setAttribute('size', new THREE.Float32BufferAttribute(sizes, 1));
+                    
+                    const mat = new THREE.PointsMaterial({ vertexColors: true, size: 0.1 * scaleVal, transparent: true, opacity: 0.8 });
+                    fieldGroup.add(new THREE.Points(geo, mat));
+                    document.getElementById('res-flux').innerText = (count > 0 ? (metricTotal/count).toFixed(3) : 0);
                 }
-                document.getElementById('res-flux').innerText = fluxApprox.toFixed(3);
-            } catch (e) {
-                document.getElementById('res-flux').innerText = "Errore sintassi campo";
-            }
+            } catch(e) { document.getElementById('res-flux').innerText = "Errore"; }
         }
     </script>
 </body>
